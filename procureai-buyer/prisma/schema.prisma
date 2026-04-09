@@ -1,0 +1,137 @@
+// This is your Prisma schema file
+// Learn more about it at https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum Role {
+  BUYER
+  VENDOR
+  ADMIN
+}
+
+enum StockStatus {
+  IN_STOCK
+  LOW_STOCK
+  OUT_OF_STOCK
+}
+
+enum RFQStatus {
+  DRAFT
+  REVIEW
+  APPROVED
+  SENT
+  CLOSED
+}
+
+enum BidStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  ACCEPTED
+  REJECTED
+}
+
+// ─── Models ──────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      Role     @default(BUYER)
+  vendorId  String?
+  vendor    Vendor?  @relation(fields: [vendorId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Vendor {
+  id        String      @id @default(cuid())
+  name      String
+  email     String      @unique
+  category  String
+  rating    Float       @default(4.0)
+  phone     String?
+  users     User[]
+  bids      Bid[]
+  rfqLinks  RFQVendor[]
+  createdAt DateTime    @default(now())
+}
+
+model InventoryItem {
+  id           String      @id @default(cuid())
+  name         String
+  sku          String      @unique
+  category     String
+  currentStock Int
+  reorderLevel Int
+  unit         String
+  status       StockStatus @default(IN_STOCK)
+  aiPrediction String?
+  lastUpdated  DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model RFQ {
+  id          String      @id @default(cuid())
+  title       String
+  description String?
+  budget      Float?
+  deadline    DateTime?
+  status      RFQStatus   @default(DRAFT)
+  items       RFQItem[]
+  bids        Bid[]
+  vendors     RFQVendor[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  approvedBy  String?
+  approvedAt  DateTime?
+  sentAt      DateTime?
+}
+
+model RFQItem {
+  id       String  @id @default(cuid())
+  rfqId    String
+  rfq      RFQ     @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  name     String
+  qty      Float
+  unit     String
+  estPrice Float?
+}
+
+model RFQVendor {
+  rfqId    String
+  vendorId String
+  rfq      RFQ    @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  vendor   Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@id([rfqId, vendorId])
+}
+
+model Bid {
+  id          String    @id @default(cuid())
+  rfqId       String
+  rfq         RFQ       @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  vendorId    String
+  vendor      Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  price       Float
+  notes       String?
+  deliveryDays Int?
+  qualityScore Float?
+  status      BidStatus @default(SUBMITTED)
+  aiScore     Float?
+  aiRank      Int?
+  aiReason    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([rfqId, vendorId])
+}

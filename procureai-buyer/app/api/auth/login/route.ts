@@ -53,14 +53,24 @@ export async function POST(req: NextRequest) {
       user: { id: user.id, email: user.email, name: user.name, role: user.role, vendorId: user.vendorId },
     });
 
-    res.headers.set(
-      "Set-Cookie",
-      `${AUTH_COOKIE}=${token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`
-    );
+    const isProd = process.env.NODE_ENV === "production";
+    const cookieOptions = [
+      `${AUTH_COOKIE}=${token}`,
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax",
+      `Max-Age=${7 * 24 * 60 * 60}`,
+    ];
+
+    if (isProd) {
+      cookieOptions.push("Secure");
+    }
+
+    res.headers.set("Set-Cookie", cookieOptions.join("; "));
 
     return res;
   } catch (err) {
-    console.error(err);
+    console.error("[Login Error]:", err);
     return serverError(err);
   }
 }

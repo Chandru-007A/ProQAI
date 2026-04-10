@@ -25,7 +25,6 @@ const buyerNav = [
 
 const vendorNav = [
   { href: "/vendor-dashboard", label: "Dashboard",  icon: LayoutDashboard },
-  { href: "/vendor-rfqs",      label: "RFQs",       icon: ShoppingCart },
 ];
 
 interface SidebarProps {

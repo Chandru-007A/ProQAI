@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
@@ -42,19 +42,19 @@ enum BidStatus {
 // ─── Models ──────────────────────────────────────────────────────────────────
 
 model User {
-  id        String   @id @default(cuid())
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
   email     String   @unique
   name      String
   password  String
   role      Role     @default(BUYER)
-  vendorId  String?
+  vendorId  String?  @db.ObjectId
   vendor    Vendor?  @relation(fields: [vendorId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Vendor {
-  id        String      @id @default(cuid())
+  id        String      @id @default(auto()) @map("_id") @db.ObjectId
   name      String
   email     String      @unique
   category  String
@@ -67,7 +67,7 @@ model Vendor {
 }
 
 model InventoryItem {
-  id           String      @id @default(cuid())
+  id           String      @id @default(auto()) @map("_id") @db.ObjectId
   name         String
   sku          String      @unique
   category     String
@@ -81,7 +81,7 @@ model InventoryItem {
 }
 
 model RFQ {
-  id          String      @id @default(cuid())
+  id          String      @id @default(auto()) @map("_id") @db.ObjectId
   title       String
   description String?
   budget      Float?
@@ -98,8 +98,8 @@ model RFQ {
 }
 
 model RFQItem {
-  id       String  @id @default(cuid())
-  rfqId    String
+  id       String  @id @default(auto()) @map("_id") @db.ObjectId
+  rfqId    String  @db.ObjectId
   rfq      RFQ     @relation(fields: [rfqId], references: [id], onDelete: Cascade)
   name     String
   qty      Float
@@ -108,19 +108,20 @@ model RFQItem {
 }
 
 model RFQVendor {
-  rfqId    String
-  vendorId String
+  id       String  @id @default(auto()) @map("_id") @db.ObjectId
+  rfqId    String  @db.ObjectId
+  vendorId String  @db.ObjectId
   rfq      RFQ    @relation(fields: [rfqId], references: [id], onDelete: Cascade)
   vendor   Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
 
-  @@id([rfqId, vendorId])
+  @@unique([rfqId, vendorId])
 }
 
 model Bid {
-  id          String    @id @default(cuid())
-  rfqId       String
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  rfqId       String    @db.ObjectId
   rfq         RFQ       @relation(fields: [rfqId], references: [id], onDelete: Cascade)
-  vendorId    String
+  vendorId    String    @db.ObjectId
   vendor      Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   price       Float
   notes       String?

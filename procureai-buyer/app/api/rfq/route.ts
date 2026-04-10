@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const where = user.role === "VENDOR" && user.vendorId
-      ? { vendors: { some: { vendorId: user.vendorId } }, status: { not: "DRAFT" as const } }
+      ? { vendors: { some: { vendorId: user.vendorId } }, status: { in: ["SENT", "CLOSED"] } }
       : {};
 
     const rfqs = await prisma.rFQ.findMany({

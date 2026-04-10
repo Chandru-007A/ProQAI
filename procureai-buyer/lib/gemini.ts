@@ -1,23 +1,26 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import Groq from "groq-sdk";
 
-// Initialise the Gemini client — runs server-side only
+// Initialise the Groq client — runs server-side only
 function getClient() {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey === "YOUR_GEMINI_API_KEY_HERE") return null;
-  return new GoogleGenerativeAI(apiKey);
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey || apiKey === "YOUR_GEMINI_API_KEY_HERE" || apiKey.includes("GEMINI")) return null;
+  return new Groq({ apiKey });
 }
 
 const client = getClient();
 
-// ─── Helper: run a Gemini prompt, graceful fallback ──────────────────────────
+// ─── Helper: run a Groq prompt, graceful fallback ────────────────────────────
 async function generate(prompt: string): Promise<string | null> {
   if (!client) return null;
   try {
-    const model = client.getGenerativeModel({ model: "gemini-1.5-flash" });
-    const result = await model.generateContent(prompt);
-    return result.response.text();
+    const chatCompletion = await client.chat.completions.create({
+      messages: [{ role: "user", content: prompt }],
+      model: "llama3-8b-8192",
+      temperature: 0.2, // Low temp for more consistent JSON structure
+    });
+    return chatCompletion.choices[0]?.message?.content || null;
   } catch (err) {
-    console.error("[Gemini] generation error:", err);
+    console.error("[Groq] generation error:", err);
     return null;
   }
 }
@@ -70,7 +73,7 @@ For each item in the list, respond with ONLY a JSON array like this (no markdown
     }
   }
 
-  // Rule-based fallback for items not covered by Gemini
+  // Rule-based fallback for items not covered by Groq
   for (const item of lowItems) {
     if (!result[item.sku]) {
       const deficit = item.reorderLevel - item.currentStock;
@@ -187,7 +190,7 @@ Respond ONLY with a JSON array, no markdown:
     }
   }
 
-  // Rule-based fallback if Gemini fails
+  // Rule-based fallback if Groq fails
   if (!aiResults.length) {
     const scored = bids.map((b) => {
       const priceScore  = Math.max(0, 100 - ((b.price - Math.min(...bids.map(x => x.price))) / (Math.max(...bids.map(x => x.price)) - Math.min(...bids.map(x => x.price)) || 1)) * 100);

@@ -1,4 +1,5 @@
 "use client";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
@@ -9,57 +10,65 @@ import {
   CheckCircle, Bell, Truck,
 } from "lucide-react";
 
-const stats = [
-  {
-    icon: <FileText size={18} style={{ color: "var(--primary)" }} />,
-    label: "Active RFQs",
-    value: "12",
-    delta: "3 this week",
-    deltaPositive: true,
-    iconBg: "var(--primary-light)",
-  },
-  {
-    icon: <DollarSign size={18} style={{ color: "var(--success)" }} />,
-    label: "Cost Savings (MTD)",
-    value: "₹2.4L",
-    delta: "12.5%",
-    deltaPositive: true,
-    iconBg: "var(--success-light)",
-  },
-  {
-    icon: <ShoppingCart size={18} style={{ color: "var(--warning)" }} />,
-    label: "Total Orders",
-    value: "48",
-    delta: "8",
-    deltaPositive: true,
-    iconBg: "var(--warning-light)",
-  },
-  {
-    icon: <Users size={18} style={{ color: "var(--info)" }} />,
-    label: "Active Vendors",
-    value: "24",
-    delta: "2",
-    deltaPositive: true,
-    iconBg: "var(--info-light)",
-  },
-];
-
-const activities = [
-  { icon: <FileText size={14} />, color: "var(--primary)", bg: "var(--primary-light)", text: "New RFQ #RFQ-2025-041 created for Office Supplies", time: "2 min ago" },
-  { icon: <AlertTriangle size={14} />, color: "var(--warning)", bg: "var(--warning-light)", text: "Low stock alert: Printer Paper (A4) — only 12 reams left", time: "15 min ago" },
-  { icon: <CheckCircle size={14} />, color: "var(--success)", bg: "var(--success-light)", text: "Bid accepted from TechVendors Co. for IT Equipment RFQ", time: "1 hr ago" },
-  { icon: <Truck size={14} />, color: "var(--info)", bg: "var(--info-light)", text: "Order #ORD-004 dispatched by Global Supplies Ltd.", time: "3 hr ago" },
-  { icon: <Bell size={14} />, color: "var(--danger)", bg: "var(--danger-light)", text: "RFQ #RFQ-2025-038 expires in 24 hours — 2 bids pending", time: "5 hr ago" },
-  { icon: <CheckCircle size={14} />, color: "var(--success)", bg: "var(--success-light)", text: "AI selected PrimeStar Traders as best vendor for Stationery", time: "Yesterday" },
-];
-
-const alerts = [
-  { text: "Printer Paper A4 — low stock", type: "warning" },
-  { text: "RFQ #038 expires tomorrow", type: "danger" },
-  { text: "3 bids awaiting review", type: "info" },
-];
-
 export default function DashboardPage() {
+  const [rfqs, setRfqs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/rfq")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setRfqs(data);
+        setLoading(false);
+      });
+  }, []);
+
+  const handleApprove = async (id: string) => {
+    await fetch(`/api/rfq/${id}/approve`, { method: "POST" });
+    // Refresh
+    const res = await fetch("/api/rfq");
+    const data = await res.json();
+    if (Array.isArray(data)) setRfqs(data);
+  };
+
+  const activeRfqs = rfqs.filter(r => r.status !== "CLOSED").length;
+  const inReviewRfqs = rfqs.filter(r => r.status === "REVIEW");
+  
+  const stats = [
+    {
+      icon: <FileText size={18} style={{ color: "var(--primary)" }} />,
+      label: "Active RFQs",
+      value: activeRfqs.toString(),
+      delta: "Auto-updated",
+      deltaPositive: true,
+      iconBg: "var(--primary-light)",
+    },
+    {
+      icon: <DollarSign size={18} style={{ color: "var(--success)" }} />,
+      label: "Cost Savings (MTD)",
+      value: "₹2.4L",
+      delta: "12.5%",
+      deltaPositive: true,
+      iconBg: "var(--success-light)",
+    },
+    {
+      icon: <ShoppingCart size={18} style={{ color: "var(--warning)" }} />,
+      label: "Pending Approvals",
+      value: inReviewRfqs.length.toString(),
+      delta: "Needs action",
+      deltaPositive: false,
+      iconBg: "var(--warning-light)",
+    },
+    {
+      icon: <Users size={18} style={{ color: "var(--info)" }} />,
+      label: "Active Vendors",
+      value: "24",
+      delta: "2",
+      deltaPositive: true,
+      iconBg: "var(--info-light)",
+    },
+  ];
+
   return (
     <DashboardLayout role="buyer">
       <PageHeader
@@ -80,31 +89,49 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Activity Feed */}
+        {/* RFQ List */}
         <div className="lg:col-span-2 card-base animate-fade-in stagger-3">
           <div className="px-5 py-4 border-b border-[var(--border)] flex items-center justify-between">
-            <h2 className="font-semibold text-sm">Recent Activity</h2>
-            <span className="text-xs" style={{ color: "var(--fg-muted)" }}>Last 24 hours</span>
+            <h2 className="font-semibold text-sm">Recent RFQs</h2>
+            <Link href="/analysis" className="text-xs text-blue-600 hover:underline">View All Analysis</Link>
           </div>
           <div className="divide-y" style={{ borderColor: "var(--border)" }}>
-            {activities.map((a, i) => (
-              <div
-                key={i}
-                className="px-5 py-3.5 flex items-start gap-3 hover:bg-[var(--bg-subtle)] transition-colors animate-fade-in"
-                style={{ animationDelay: `${0.15 + i * 0.05}s` }}
-              >
+            {loading ? (
+              <div className="px-5 py-8 text-center text-sm" style={{ color: "var(--fg-muted)" }}>Loading RFQs...</div>
+            ) : rfqs.length === 0 ? (
+              <div className="px-5 py-8 text-center text-sm" style={{ color: "var(--fg-muted)" }}>No RFQs found</div>
+            ) : (
+              rfqs.slice(0, 10).map((rfq, i) => (
                 <div
-                  className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
-                  style={{ background: a.bg, color: a.color }}
+                  key={rfq.id}
+                  className="px-5 py-4 flex items-start gap-4 hover:bg-[var(--bg-subtle)] transition-colors animate-fade-in"
+                  style={{ animationDelay: `${0.15 + i * 0.05}s` }}
                 >
-                  {a.icon}
+                  <div
+                    className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
+                    style={{ background: rfq.status === "REVIEW" ? "var(--warning-light)" : "var(--primary-light)", color: rfq.status === "REVIEW" ? "var(--warning)" : "var(--primary)" }}
+                  >
+                    {rfq.status === "REVIEW" ? <AlertTriangle size={16} /> : <FileText size={16} />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-start">
+                      <p className="font-semibold text-sm leading-snug" style={{ color: "var(--fg)" }}>{rfq.title}</p>
+                      <span className="badge text-[10px] ml-2" style={{ background: rfq.status === "REVIEW" ? "var(--warning-light)" : "var(--bg-muted)" }}>{rfq.status}</span>
+                    </div>
+                    <p className="text-xs mt-1" style={{ color: "var(--fg-subtle)" }}>
+                      {rfq.items?.length || 0} items · {new Date(rfq.createdAt).toLocaleDateString()}
+                    </p>
+                    {rfq.status === "REVIEW" && (
+                      <div className="mt-3">
+                         <button onClick={() => handleApprove(rfq.id)} className="btn btn-primary btn-sm">
+                           <CheckCircle size={14} /> Approve & Send to Vendors
+                         </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm leading-snug" style={{ color: "var(--fg)" }}>{a.text}</p>
-                  <p className="text-xs mt-0.5" style={{ color: "var(--fg-subtle)" }}>{a.time}</p>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
@@ -122,41 +149,9 @@ export default function DashboardPage() {
               <Link href="/inventory" className="btn btn-secondary w-full">
                 <Package size={14} /> View Inventory
               </Link>
-              <Link href="/dashboard" className="btn btn-secondary w-full">
-                <Users size={14} /> Manage Vendors
-              </Link>
               <Link href="/analysis" className="btn btn-secondary w-full">
-                <BarChart3 size={14} /> View Analytics
+                <BarChart3 size={14} /> View Analysis & Bids
               </Link>
-            </div>
-          </div>
-
-          {/* Alerts */}
-          <div className="card-base animate-fade-in stagger-5">
-            <div className="px-5 py-4 border-b border-[var(--border)] flex items-center gap-2">
-              <AlertTriangle size={14} style={{ color: "var(--warning)" }} />
-              <h2 className="font-semibold text-sm">Alerts</h2>
-              <span
-                className="ml-auto text-xs font-semibold px-1.5 py-0.5 rounded-full"
-                style={{ background: "var(--danger-light)", color: "var(--danger)" }}
-              >
-                {alerts.length}
-              </span>
-            </div>
-            <div className="p-4 space-y-2">
-              {alerts.map((a, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm"
-                  style={{
-                    background: a.type === "warning" ? "var(--warning-light)" : a.type === "danger" ? "var(--danger-light)" : "var(--info-light)",
-                    color: a.type === "warning" ? "#b45309" : a.type === "danger" ? "var(--danger)" : "#0e7490",
-                  }}
-                >
-                  <Clock size={13} />
-                  {a.text}
-                </div>
-              ))}
             </div>
           </div>
         </div>

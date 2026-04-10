@@ -12,9 +12,21 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!rfq) return notFound();
     if (rfq.status !== "REVIEW") return badRequest("RFQ must be in REVIEW status to approve");
 
+    const vendors = await prisma.vendor.findMany();
+
     const updated = await prisma.rFQ.update({
       where: { id },
-      data: { status: "APPROVED", approvedBy: user.name, approvedAt: new Date() },
+      data: {
+        status: "SENT",
+        approvedBy: user.name,
+        approvedAt: new Date(),
+        sentAt: new Date(),
+        vendors: {
+          create: vendors.map((v) => ({
+            vendor: { connect: { id: v.id } },
+          })),
+        },
+      },
     });
     return json(updated);
   } catch (err) {

@@ -69,7 +69,25 @@ async function main() {
     create: { name: "Sneha Iyer", email: "vendor3@global.com", password: await hash("password123"), role: "VENDOR", vendorId: vendors[2].id },
   });
 
-  console.log("✅ 4 users created");
+  await prisma.user.upsert({
+    where: { email: "vendor4@fasttrack.com" },
+    update: {},
+    create: { name: "Kiran Patel", email: "vendor4@fasttrack.com", password: await hash("password123"), role: "VENDOR", vendorId: vendors[3].id },
+  });
+
+  await prisma.user.upsert({
+    where: { email: "vendor5@bestbuy.com" },
+    update: {},
+    create: { name: "Ravi Kumar", email: "vendor5@bestbuy.com", password: await hash("password123"), role: "VENDOR", vendorId: vendors[4].id },
+  });
+
+  await prisma.user.upsert({
+    where: { email: "vendor6@smartsource.com" },
+    update: {},
+    create: { name: "Anita Singh", email: "vendor6@smartsource.com", password: await hash("password123"), role: "VENDOR", vendorId: vendors[5].id },
+  });
+
+  console.log("✅ 7 users created (1 buyer, 6 vendors)");
 
   // ─── Inventory ────────────────────────────────────────────
   const inventoryItems = [
@@ -132,10 +150,13 @@ async function main() {
   console.log("✅ RFQ with bids created");
   console.log("\n🎉 Database seeded successfully!");
   console.log("\n📋 Login credentials:");
-  console.log("  Buyer:          buyer@proq.ai        / password123");
-  console.log("  Vendor (Tech):  vendor1@techvendors.com / password123");
-  console.log("  Vendor (Prime): vendor2@primestar.com   / password123");
-  console.log("  Vendor (Global):vendor3@global.com       / password123");
+  console.log("  Buyer:          buyer@proq.ai             / password123");
+  console.log("  Vendor (Tech):  vendor1@techvendors.com   / password123");
+  console.log("  Vendor (Prime): vendor2@primestar.com     / password123");
+  console.log("  Vendor (Global):vendor3@global.com        / password123");
+  console.log("  Vendor (Fast):  vendor4@fasttrack.com     / password123");
+  console.log("  Vendor (Best):  vendor5@bestbuy.com       / password123");
+  console.log("  Vendor (Smart): vendor6@smartsource.com   / password123");
 }
 
 main()

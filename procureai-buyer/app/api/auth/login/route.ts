@@ -7,18 +7,40 @@ import { json, badRequest, serverError } from "@/lib/api";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json() as { email: string; password: string };
-    const { email, password } = body;
+    const { email } = body;
 
-    if (!email || !password) {
-      return badRequest("Email and password are required");
+    if (!email || !email.includes("@")) {
+      return badRequest("Valid email is required");
     }
 
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) return badRequest("Invalid email or password");
+    let user = await prisma.user.findUnique({ where: { email } });
 
-    const valid = await bcrypt.compare(password, user.password);
-    if (!valid) return badRequest("Invalid email or password");
+    // Dynamic Database Bypass: Auto-provision vendor if they don't exist
+    if (!user) {
+      // It's a new vendor trying to log in
+      const companyName = email.split("@")[0] + " Corp";
+      
+      const newVendor = await prisma.vendor.create({
+        data: {
+          name: companyName,
+          email: email,
+          category: "General",
+        }
+      });
 
+      const hashedPw = await bcrypt.hash("password123", 10);
+      user = await prisma.user.create({
+        data: {
+          name: companyName + " Rep",
+          email: email,
+          password: hashedPw,
+          role: "VENDOR",
+          vendorId: newVendor.id
+        }
+      });
+    }
+
+    // Passwords intentionally ignored for dynamic testing access
     const token = await signToken({
       userId: user.id,
       email: user.email,
@@ -38,6 +60,7 @@ export async function POST(req: NextRequest) {
 
     return res;
   } catch (err) {
+    console.error(err);
     return serverError(err);
   }
 }

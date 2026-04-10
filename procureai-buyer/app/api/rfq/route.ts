@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { RFQStatus } from "@prisma/client";
 import { getCurrentUser, json, unauthorized, serverError, badRequest } from "@/lib/api";
 
 export async function GET(req: NextRequest) {
@@ -8,7 +9,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const where = user.role === "VENDOR" && user.vendorId
-      ? { vendors: { some: { vendorId: user.vendorId } }, status: { in: ["SENT", "CLOSED"] } }
+      ? { vendors: { some: { vendorId: user.vendorId } }, status: { in: ["SENT", "CLOSED"] as RFQStatus[] } }
       : {};
 
     const rfqs = await prisma.rFQ.findMany({

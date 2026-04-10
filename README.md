@@ -223,9 +223,8 @@ Contributions are welcome!
 ---
 
 ## 🧩 Author
-
-**Sri Sayee K**
-📧 [ksrisayee@gmail.com](mailto:ksrisayee@gmail.com)
-🔗 [GitHub](https://github.com/xxxx)
+Chandra Prasad S
+Shapariiyyappan G
+Krithik S
 
 ---

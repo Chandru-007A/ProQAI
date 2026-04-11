@@ -1,8 +1,8 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { signToken, AUTH_COOKIE } from "@/lib/auth";
-import { json, badRequest, serverError } from "@/lib/api";
+import { badRequest, serverError } from "@/lib/api";
 
 export async function POST(req: NextRequest) {
   try {
@@ -49,24 +49,19 @@ export async function POST(req: NextRequest) {
       vendorId: user.vendorId,
     });
 
-    const res = json({
+    // Create response with NextResponse for proper cookie handling
+    const res = NextResponse.json({
       user: { id: user.id, email: user.email, name: user.name, role: user.role, vendorId: user.vendorId },
     });
 
-    const isProd = process.env.NODE_ENV === "production";
-    const cookieOptions = [
-      `${AUTH_COOKIE}=${token}`,
-      "HttpOnly",
-      "Path=/",
-      "SameSite=Lax",
-      `Max-Age=${7 * 24 * 60 * 60}`,
-    ];
-
-    if (isProd) {
-      cookieOptions.push("Secure");
-    }
-
-    res.headers.set("Set-Cookie", cookieOptions.join("; "));
+    // Set cookie using NextResponse cookies API (works reliably on Vercel)
+    res.cookies.set(AUTH_COOKIE, token, {
+      httpOnly: true,
+      path: "/",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
+      secure: process.env.NODE_ENV === "production",
+    });
 
     return res;
   } catch (err) {

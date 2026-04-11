@@ -2,12 +2,34 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { signToken, AUTH_COOKIE } from "@/lib/auth";
-import { badRequest, serverError } from "@/lib/api";
+import { badRequest } from "@/lib/api";
 
 export async function POST(req: NextRequest) {
+  // Ensure Prisma client is initialized before using
   try {
+    await prisma.$connect();
+  } catch (dbErr: any) {
+    console.error("[Login Error] Database connection failed:", dbErr.message);
+    return NextResponse.json(
+      { error: "Database connection failed. Check DATABASE_URL in Vercel settings." },
+      { status: 500 }
+    );
+  }
+  try {
+    // Check DATABASE_URL is configured
+    if (!process.env.DATABASE_URL) {
+      console.error("[Login Error] DATABASE_URL not set");
+      return NextResponse.json(
+        { error: "Server configuration error: DATABASE_URL not set" },
+        { status: 500 }
+      );
+    }
+
     const body = await req.json() as { email: string; password: string };
     const { email } = body;
+
+    // Log for debugging (check Vercel logs)
+    console.log("[Login Attempt]", { email, env: process.env.NODE_ENV, dbUrl: process.env.DATABASE_URL?.substring(0, 20) + "..." });
 
     if (!email || !email.includes("@")) {
       return badRequest("Valid email is required");
@@ -64,8 +86,11 @@ export async function POST(req: NextRequest) {
     });
 
     return res;
-  } catch (err) {
+  } catch (err: any) {
     console.error("[Login Error]:", err);
-    return serverError(err);
+    return NextResponse.json(
+      { error: err.message || "Login failed", details: String(err) },
+      { status: 500 }
+    );
   }
 }

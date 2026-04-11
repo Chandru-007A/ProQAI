@@ -1,7 +1,13 @@
 import { SignJWT, jwtVerify } from "jose";
 
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  console.warn("[Auth] JWT_SECRET not set - using fallback. Set JWT_SECRET in Vercel environment variables!");
+}
+
 const secret = new TextEncoder().encode(
-  process.env.JWT_SECRET || "fallback-secret-change-in-production"
+  JWT_SECRET || "fallback-secret-change-in-production"
 );
 
 export interface JWTPayload {

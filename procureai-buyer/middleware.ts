@@ -17,7 +17,12 @@ export async function middleware(req: NextRequest) {
   if (!needsAuth) return NextResponse.next();
 
   const token = req.cookies.get(AUTH_COOKIE)?.value;
+
+  // Debug logging (check Vercel logs)
+  console.log("[Middleware]", { pathname, hasToken: !!token, cookies: req.cookies.getAll().map(c => c.name) });
+
   if (!token) {
+    console.log("[Middleware] No token, redirecting to login");
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
